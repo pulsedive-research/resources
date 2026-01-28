@@ -1,0 +1,1 @@
+All the files are double base64-encoded with the exception of the file `Encrypted code from Figure 13`.
